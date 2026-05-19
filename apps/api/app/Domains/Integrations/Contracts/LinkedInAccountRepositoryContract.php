@@ -1,0 +1,11 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Domains\Integrations\Contracts;
+
+use App\Domains\Shared\Contracts\WorkspaceScopedRepositoryContract;
+
+interface LinkedInAccountRepositoryContract extends WorkspaceScopedRepositoryContract
+{
+}
