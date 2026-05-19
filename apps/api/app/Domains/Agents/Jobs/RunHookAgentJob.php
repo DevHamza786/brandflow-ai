@@ -9,20 +9,23 @@ use App\Domains\Shared\Jobs\BaseQueueJob;
 use App\Queue\Enums\QueueName;
 use App\Queue\Support\JobTagger;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
- * Dispatches execution of a registered agent by slug.
- *
- * @see docs/AGENTS.md §7 Queue Rules
+ * Queue entry point for HookAgent (ai queue).
  */
-final class RunAgentJob extends BaseQueueJob implements ShouldBeUnique
+final class RunHookAgentJob extends BaseQueueJob implements ShouldBeUnique
 {
+    public int $timeout = 120;
+
     public function __construct(
         string $workspaceId,
         public readonly string $agentRunId,
-        public readonly string $slug,
     ) {
         parent::__construct($workspaceId);
+
+        $this->timeout = (int) config('agents.agents.hook.timeout', 120);
     }
 
     public function uniqueId(): string
@@ -32,10 +35,7 @@ final class RunAgentJob extends BaseQueueJob implements ShouldBeUnique
 
     public function queueName(): string
     {
-        $queue = (string) config("agents.agents.{$this->slug}.queue", QueueName::Ai->value);
-
-        // Map legacy config value `scrape` → `scraping`.
-        return $queue === 'scrape' ? QueueName::Scraping->value : $queue;
+        return QueueName::Ai->value;
     }
 
     /**
@@ -45,13 +45,24 @@ final class RunAgentJob extends BaseQueueJob implements ShouldBeUnique
     {
         return JobTagger::merge(
             parent::tags(),
-            JobTagger::agent($this->slug),
+            JobTagger::agent('hook'),
             JobTagger::agentRun($this->agentRunId),
         );
     }
 
     public function handle(AgentRunner $runner): void
     {
-        $runner->run($this->slug, $this->workspaceId, $this->agentRunId);
+        $runner->run('hook', $this->workspaceId, $this->agentRunId);
+    }
+
+    public function failed(?Throwable $exception): void
+    {
+        parent::failed($exception);
+
+        Log::error('hook.agent.job_failed', [
+            'workspace_id' => $this->workspaceId,
+            'agent_run_id' => $this->agentRunId,
+            'message' => $exception?->getMessage(),
+        ]);
     }
 }

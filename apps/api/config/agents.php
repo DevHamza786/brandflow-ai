@@ -22,7 +22,7 @@ return [
     'agents' => [
 
         'hook' => [
-            'class' => null, // App\Domains\Agents\Agents\HookAgent\HookAgent::class
+            'class' => \App\Domains\Agents\Agents\HookAgent\HookAgent::class,
             'queue' => 'ai',
             'timeout' => 120,
             'description' => 'Score and generate opening-line variants (Hook Lab).',

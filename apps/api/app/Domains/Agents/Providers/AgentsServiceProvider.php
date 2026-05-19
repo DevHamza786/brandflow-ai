@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace App\Domains\Agents\Providers;
 
+use App\Domains\Agents\Agents\HookAgent\HookAgent;
 use App\Domains\Agents\Contracts\AgentContract;
+use App\Domains\Agents\Contracts\AgentRunRepositoryContract;
+use App\Domains\Agents\Repositories\AgentRunRepository;
+use App\Domains\Agents\Services\AgentRunner;
 use App\Domains\Shared\Providers\DomainServiceProvider;
 use InvalidArgumentException;
 
@@ -17,12 +21,12 @@ final class AgentsServiceProvider extends DomainServiceProvider
 
     protected function registerRepositories(): void
     {
-        // $this->app->bind(AgentRunRepositoryContract::class, AgentRunRepository::class);
-        // $this->app->bind(AgentStepRepositoryContract::class, AgentStepRepository::class);
+        $this->app->bind(AgentRunRepositoryContract::class, AgentRunRepository::class);
     }
 
     protected function registerServices(): void
     {
+        $this->app->singleton(AgentRunner::class);
         $this->registerAgentBindings();
     }
 
