@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Domains\AI\Contracts;
 
-/**
- * Resolves and renders versioned prompt templates.
- */
+use App\Domains\AI\Data\PromptTemplateDefinition;
+
 interface PromptTemplateRegistryContract
 {
+    public function resolve(string $slug, ?string $version = null): PromptTemplateDefinition;
+
     /**
      * @param  array<string, mixed>  $variables
      */

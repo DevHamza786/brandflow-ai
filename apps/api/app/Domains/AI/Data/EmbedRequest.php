@@ -13,6 +13,7 @@ final class EmbedRequest extends DataTransferObject
         public readonly string $provider,
         public readonly string $model,
         public readonly string $input,
+        public readonly ?string $traceId = null,
     ) {
     }
 }

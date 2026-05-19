@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Domains\Agents\Jobs;
 
 use App\Domains\Shared\Jobs\BaseQueueJob;
+use App\Queue\Enums\QueueName;
+use App\Queue\Support\JobTagger;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 
 /**
@@ -14,16 +16,12 @@ use Illuminate\Contracts\Queue\ShouldBeUnique;
  */
 final class RunAgentJob extends BaseQueueJob implements ShouldBeUnique
 {
-    public int $timeout;
-
     public function __construct(
         string $workspaceId,
         public readonly string $agentRunId,
         public readonly string $slug,
     ) {
         parent::__construct($workspaceId);
-
-        $this->timeout = (int) config("agents.agents.{$slug}.timeout", 120);
     }
 
     public function uniqueId(): string
@@ -33,7 +31,10 @@ final class RunAgentJob extends BaseQueueJob implements ShouldBeUnique
 
     public function queueName(): string
     {
-        return (string) config("agents.agents.{$this->slug}.queue", 'ai');
+        $queue = (string) config("agents.agents.{$this->slug}.queue", QueueName::Ai->value);
+
+        // Map legacy config value `scrape` → `scraping`.
+        return $queue === 'scrape' ? QueueName::Scraping->value : $queue;
     }
 
     /**
@@ -41,11 +42,11 @@ final class RunAgentJob extends BaseQueueJob implements ShouldBeUnique
      */
     public function tags(): array
     {
-        return [
-            ...parent::tags(),
-            'agent:'.$this->slug,
-            'run:'.$this->agentRunId,
-        ];
+        return JobTagger::merge(
+            parent::tags(),
+            JobTagger::agent($this->slug),
+            JobTagger::agentRun($this->agentRunId),
+        );
     }
 
     public function handle(): void

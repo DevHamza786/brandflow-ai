@@ -12,4 +12,9 @@ final class WorkflowsServiceProvider extends DomainServiceProvider
     {
         return 'Workflows';
     }
+
+    protected function registerServices(): void
+    {
+        // WorkflowExecutionTracker + WorkflowOrchestrator bound in QueueServiceProvider.
+    }
 }

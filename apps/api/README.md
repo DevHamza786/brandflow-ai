@@ -27,6 +27,21 @@ Backend for the AI-powered personal branding operating system.
 
 ## Development
 
+### Docker (recommended)
+
+Full stack: PostgreSQL, Redis, Nginx, Horizon, Scheduler.
+
+```bash
+# From repository root
+cp .env.docker.example .env
+cp apps/api/.env.docker.example apps/api/.env
+docker compose up -d --build
+```
+
+API: http://localhost:8080 — see [docker/README.md](../../docker/README.md) and `Makefile`.
+
+### Local (without Docker)
+
 ```bash
 composer install
 cp .env.example .env
@@ -35,11 +50,19 @@ php artisan migrate
 php artisan serve
 ```
 
-Queue worker (when jobs are implemented):
+Queue workers (Redis):
 
 ```bash
-php artisan queue:work --queue=critical,ai,scrape,analytics,default
+# Linux / macOS / WSL
+php artisan horizon
+
+# Windows host (no pcntl)
+php artisan queue:work redis --queue=critical,scheduling,workflows,ai,scraping,analytics,default
 ```
+
+Horizon dashboard: `/horizon` (local: open access; production: configure gate in `HorizonServiceProvider`).
+
+Queue infrastructure: [app/Queue/README.md](app/Queue/README.md)
 
 ## Architecture (summary)
 

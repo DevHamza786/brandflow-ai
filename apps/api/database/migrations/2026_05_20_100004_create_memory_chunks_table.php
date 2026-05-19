@@ -42,10 +42,8 @@ return new class extends Migration
             // active | superseded | archived
             $table->string('status', 32)->default('active');
 
-            $table->foreignUuid('superseded_by_chunk_id')
-                ->nullable()
-                ->constrained('memory_chunks')
-                ->nullOnDelete();
+            // Self-FK added after table exists (PostgreSQL cannot reference in-flight CREATE).
+            $table->uuid('superseded_by_chunk_id')->nullable();
 
             $table->string('source')->nullable();
             $table->string('source_uri')->nullable();
@@ -68,6 +66,13 @@ return new class extends Migration
             $table->index(['workspace_id', 'status', 'updated_at']);
             $table->index(['brand_profile_id', 'type']);
             $table->index('embedding_id');
+        });
+
+        Schema::table('memory_chunks', function (Blueprint $table): void {
+            $table->foreign('superseded_by_chunk_id')
+                ->references('id')
+                ->on('memory_chunks')
+                ->nullOnDelete();
         });
 
         // Sparse (keyword) retrieval — PostgreSQL full-text search.

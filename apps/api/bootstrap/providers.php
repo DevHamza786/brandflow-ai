@@ -1,9 +1,8 @@
 <?php
 
-use App\Providers\AppServiceProvider;
-use App\Providers\DomainsServiceProvider;
-
 return [
-    AppServiceProvider::class,
-    DomainsServiceProvider::class,
+    App\Providers\AppServiceProvider::class,
+    App\Providers\DomainsServiceProvider::class,
+    App\Providers\HorizonServiceProvider::class,
+    App\Providers\QueueServiceProvider::class,
 ];
