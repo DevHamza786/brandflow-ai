@@ -39,7 +39,7 @@ abstract class AbstractQueueJob implements ShouldQueue
     public bool $failOnTimeout = true;
 
     public function __construct(
-        public readonly string $workspaceId,
+        public string $workspaceId,
     ) {
         $policy = app(RetryPolicyResolver::class)->forQueue($this->queueName());
 
@@ -47,7 +47,8 @@ abstract class AbstractQueueJob implements ShouldQueue
         $this->backoff = $policy->backoff;
         $this->timeout = $policy->timeout;
 
-        $this->onConnection(config('queues.redis_connection', 'redis'));
+        // Laravel queue connection name (config/queue.php), not Redis client name.
+        $this->onConnection((string) config('queue.default', 'redis'));
         $this->onQueue($this->queueName());
     }
 
@@ -59,8 +60,8 @@ abstract class AbstractQueueJob implements ShouldQueue
     public function middleware(): array
     {
         return [
-            new ApplyRetryPolicy,
-            new LogJobLifecycle,
+            app(ApplyRetryPolicy::class),
+            app(LogJobLifecycle::class),
         ];
     }
 

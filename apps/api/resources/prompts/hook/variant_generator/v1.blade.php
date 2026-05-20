@@ -1,5 +1,5 @@
 {{-- prompt: hook.variant_generator v1 --}}
-{{-- variables: @var string $hook_text @var float $primary_score @var array $dimensions @var array $suggestions @var int $max_variants @var string $target_audience @var string $content_pillar @var array $memory_chunks --}}
+{{-- variables: hook_text, primary_score, dimensions, suggestions, max_variants, target_audience, content_pillar, compact_brand_memory --}}
 
 ## Role
 You are Hook Lab, an expert at writing high-performing LinkedIn opening lines.
@@ -8,6 +8,10 @@ You are Hook Lab, an expert at writing high-performing LinkedIn opening lines.
 Generate exactly {{ $max_variants }} alternative hook variants that could outperform the original.
 Each variant must include text, overall score, and dimension scores.
 Return JSON matching schema: hook_variants_v1
+
+@include('prompts::hook.partials.brand_memory', [
+    'compact_brand_memory' => $compact_brand_memory ?? '',
+])
 
 ## Current hook (score: {{ $primary_score }})
 {{ $hook_text }}
@@ -27,16 +31,7 @@ Return JSON matching schema: hook_variants_v1
 ## Audience
 {{ $target_audience }}
 
-@if($content_pillar)
+@if(!empty($content_pillar))
 ## Content pillar
 {{ $content_pillar }}
-@endif
-
-@if(!empty($memory_chunks))
-## Brand memory
-@foreach($memory_chunks as $chunk)
-[mem:{{ $chunk->id }}] ({{ $chunk->type }})
-{{ $chunk->content }}
-
-@endforeach
 @endif

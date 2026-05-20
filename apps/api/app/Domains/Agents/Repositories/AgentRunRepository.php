@@ -27,6 +27,18 @@ final class AgentRunRepository implements AgentRunRepositoryContract
             ->firstOrFail();
     }
 
+    public function findByIdempotencyKey(string $workspaceId, ?string $idempotencyKey): ?AgentRun
+    {
+        if ($idempotencyKey === null || $idempotencyKey === '') {
+            return null;
+        }
+
+        return AgentRun::query()
+            ->where('workspace_id', $workspaceId)
+            ->where('idempotency_key', $idempotencyKey)
+            ->first();
+    }
+
     /**
      * @param  array<string, mixed>  $input
      * @param  array<string, mixed>  $options
@@ -77,5 +89,14 @@ final class AgentRunRepository implements AgentRunRepositoryContract
             ],
             'completed_at' => Carbon::now(),
         ]);
+    }
+
+    public function mergeOptions(AgentRun $run, array $options): AgentRun
+    {
+        $run->update([
+            'options' => array_merge($run->options ?? [], $options),
+        ]);
+
+        return $run->fresh() ?? $run;
     }
 }

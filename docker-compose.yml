@@ -203,7 +203,7 @@ services:
     restart: unless-stopped
     logging: *default-logging
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@pbos.local}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@example.com}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-pbos_admin}
       PGADMIN_CONFIG_SERVER_MODE: "False"
     ports:

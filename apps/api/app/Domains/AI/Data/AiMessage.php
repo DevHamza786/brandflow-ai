@@ -29,7 +29,7 @@ final class AiMessage extends DataTransferObject
     /**
      * @param  array{role: string, content: string}  $payload
      */
-    public static function fromArray(array $payload): self
+    public static function fromArray(array $payload): static
     {
         return new self(
             role: AiMessageRole::from($payload['role']),

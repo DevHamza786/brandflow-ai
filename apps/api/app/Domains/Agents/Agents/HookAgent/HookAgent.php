@@ -7,14 +7,15 @@ namespace App\Domains\Agents\Agents\HookAgent;
 use App\Domains\Agents\Agents\HookAgent\Data\HookCollection;
 use App\Domains\Agents\Agents\HookAgent\Exceptions\HookContentNotFoundException;
 use App\Domains\Agents\Agents\HookAgent\Exceptions\HookValidationException;
+use App\Domains\Agents\Agents\HookAgent\Services\HookAgentMemoryEnrichmentService;
 use App\Domains\Agents\Agents\HookAgent\Support\HookResponseValidator;
 use App\Domains\Agents\Contracts\AgentContract;
 use App\Domains\Agents\Data\AgentContext;
 use App\Domains\Agents\Data\AgentResult;
-use App\Domains\Brand\Contracts\MemoryRetrievalServiceContract;
+use App\Domains\Content\Actions\PersistHookGeneratedOutputAction;
 use App\Domains\Content\Contracts\ContentVersionRepositoryContract;
-use App\Domains\Content\Contracts\HookScoreRepositoryContract;
 use App\Domains\Content\Events\HookScored;
+use App\Domains\Content\Services\HookGeneratedOutputPersistenceService;
 use App\Domains\Content\Services\HookGenerationService;
 use App\Domains\Content\Services\HookScoringService;
 use Illuminate\Support\Facades\Log;
@@ -31,8 +32,9 @@ final class HookAgent implements AgentContract
         private readonly ContentVersionRepositoryContract $contentVersions,
         private readonly HookScoringService $scoringService,
         private readonly HookGenerationService $generationService,
-        private readonly HookScoreRepositoryContract $hookScores,
-        private readonly MemoryRetrievalServiceContract $memoryRetrieval,
+        private readonly PersistHookGeneratedOutputAction $persistHookOutput,
+        private readonly HookGeneratedOutputPersistenceService $generatedOutputPersistence,
+        private readonly HookAgentMemoryEnrichmentService $memoryEnrichment,
         private readonly HookResponseValidator $validator,
     ) {
     }
@@ -50,10 +52,14 @@ final class HookAgent implements AgentContract
             throw new HookValidationException('content_version_id is required.');
         }
 
+        $reserved = $this->generatedOutputPersistence->ensureReserved($context, $config);
+        $generatedOutputId = $reserved->id;
+
         Log::info('hook.agent.started', [
             'workspace_id' => $context->workspaceId,
             'agent_run_id' => $context->agentRunId,
             'content_version_id' => $config->contentVersionId,
+            'generated_output_id' => $generatedOutputId,
         ]);
 
         $version = $this->contentVersions->findForWorkspace(
@@ -71,20 +77,28 @@ final class HookAgent implements AgentContract
         $hookText = $version->extractOpeningLines();
         $this->validator->validateHookText($hookText);
 
-        $memory = $this->memoryRetrieval->retrieve(
-            workspaceId: $context->workspaceId,
-            query: $hookText,
-            types: ['voice', 'anti_patterns', 'performance'],
-            memoryVersion: $config->memoryVersion,
-            limit: (int) config('ai.memory.max_chunks', 10),
+        $brandMemory = $this->memoryEnrichment->enrich(
+            $context->workspaceId,
+            $hookText,
+            $config,
         );
+
+        Log::info('hook.agent.memory_enriched', [
+            'workspace_id' => $context->workspaceId,
+            'agent_run_id' => $context->agentRunId,
+            'profile_id' => $brandMemory->profileId,
+            'memory_version' => $brandMemory->memoryVersion,
+            'used_fallback' => $brandMemory->usedFallback,
+            'compact_chars' => strlen($brandMemory->compactBrandSection),
+            'chunk_count' => count($brandMemory->selectedChunks),
+        ]);
 
         try {
             $primary = $this->scoringService->score(
                 workspaceId: $context->workspaceId,
                 hookText: $hookText,
                 config: $config,
-                memory: $memory,
+                brandMemory: $brandMemory,
             );
 
             $variants = $this->generationService->generate(
@@ -92,7 +106,7 @@ final class HookAgent implements AgentContract
                 hookText: $hookText,
                 primaryScore: $primary,
                 config: $config,
-                memory: $memory,
+                brandMemory: $brandMemory,
             );
 
             $collection = new HookCollection(
@@ -104,38 +118,48 @@ final class HookAgent implements AgentContract
 
             $this->validator->validateCollection($collection, $config->maxVariants);
 
-            $hookScore = $this->hookScores->persistFromCollection(
-                workspaceId: $context->workspaceId,
-                contentVersionId: $config->contentVersionId,
-                agentRunId: $context->agentRunId,
-                collection: $collection,
-                model: $config->resolvedModel(),
-                promptVersion: $config->scorerPromptVersion,
-                traceId: null,
-                metadata: [
-                    'experiment_id' => $config->experimentId,
-                    'generator_prompt_version' => $config->generatorPromptVersion,
-                ],
+            $persisted = $this->persistHookOutput->execute(
+                $context,
+                $config,
+                $collection,
+                $brandMemory->memoryContextForPersistence(),
+                $generatedOutputId,
+                $brandMemory,
             );
+
+            $hookScore = $persisted['hook_score'];
+            $generatedOutputId = $persisted['generated_output_id'];
 
             event(new HookScored(
                 workspaceId: $context->workspaceId,
                 contentVersionId: $config->contentVersionId,
                 agentRunId: $context->agentRunId,
                 hookScoreId: $hookScore->id,
-                payload: $collection->toAnalyticsPayload($config->contentVersionId, $context->agentRunId),
+                payload: array_merge(
+                    $collection->toAnalyticsPayload($config->contentVersionId, $context->agentRunId),
+                    $brandMemory->toAnalyticsPayload(),
+                    [
+                        'workflow_run_id' => $context->option('workflow_run_id'),
+                        'hook_score_id' => $hookScore->id,
+                        'generated_output_id' => $generatedOutputId,
+                    ],
+                ),
+                generatedOutputId: $generatedOutputId,
             ));
 
             Log::info('hook.agent.completed', [
                 'workspace_id' => $context->workspaceId,
                 'agent_run_id' => $context->agentRunId,
                 'hook_score_id' => $hookScore->id,
+                'generated_output_id' => $generatedOutputId,
                 'overall' => $collection->primary->overall,
             ]);
 
             return new AgentResult(
                 output: array_merge($collection->toAgentOutput(), [
                     'hook_score_id' => $hookScore->id,
+                    'generated_output_id' => $generatedOutputId,
+                    'brand_memory' => $brandMemory->toAnalyticsPayload(),
                 ]),
                 summary: sprintf('Hook scored %.1f with %d variants.', $collection->primary->overall, count($variants)),
             );
@@ -143,6 +167,7 @@ final class HookAgent implements AgentContract
             Log::error('hook.agent.failed', [
                 'workspace_id' => $context->workspaceId,
                 'agent_run_id' => $context->agentRunId,
+                'generated_output_id' => $generatedOutputId,
                 'message' => $e->getMessage(),
             ]);
 

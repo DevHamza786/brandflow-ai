@@ -10,6 +10,10 @@ namespace App\Queue\Enums;
 enum QueueName: string
 {
     case Critical = 'critical';
+
+    /** Batch cron scheduler — claims due rows and pushes publish jobs ahead of scheduling workers. */
+    case Orchestration = 'orchestration';
+
     case Scheduling = 'scheduling';
     case Workflows = 'workflows';
     case Ai = 'ai';

@@ -69,7 +69,7 @@ return [
             'base_url' => env('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta'),
             'timeout' => (int) env('GEMINI_TIMEOUT', 120),
             'embeddings_model' => env('GEMINI_EMBEDDINGS_MODEL', 'text-embedding-004'),
-            'default_model' => env('GEMINI_DEFAULT_MODEL', 'gemini-2.0-flash'),
+            'default_model' => env('GEMINI_DEFAULT_MODEL', 'gemini-2.5-flash'),
         ],
 
     ],
@@ -82,6 +82,20 @@ return [
     'memory' => [
         'system_preamble' => 'Use the following brand memory chunks when relevant. Cite as [mem:{id}].',
         'max_chunks' => (int) env('AI_MEMORY_MAX_CHUNKS', 10),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Hook Agent brand memory (compact injection — anti-bloat)
+    |--------------------------------------------------------------------------
+    */
+    'hook_agent' => [
+        'max_memory_chunks' => (int) env('HOOK_MEMORY_MAX_CHUNKS', 3),
+        'max_chunk_chars' => (int) env('HOOK_MEMORY_MAX_CHUNK_CHARS', 400),
+        'max_writing_samples' => (int) env('HOOK_MEMORY_MAX_WRITING_SAMPLES', 2),
+        'max_writing_sample_excerpt_chars' => (int) env('HOOK_MEMORY_SAMPLE_EXCERPT_CHARS', 280),
+        'max_compact_section_chars' => (int) env('HOOK_MEMORY_MAX_COMPACT_CHARS', 1200),
+        'log_prompt_enrichment' => filter_var(env('HOOK_LOG_PROMPT_ENRICHMENT', false), FILTER_VALIDATE_BOOL),
     ],
 
 ];

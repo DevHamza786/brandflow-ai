@@ -23,25 +23,32 @@ final class GenerateHooksAction
     public function execute(
         string $workspaceId,
         HookAgentConfig $config,
+        ?string $workflowRunId = null,
         ?string $idempotencyKey = null,
     ): AgentRun {
+        $options = [
+            'max_variants' => $config->maxVariants,
+            'target_audience' => $config->targetAudience,
+            'content_pillar' => $config->contentPillar,
+            'provider' => $config->provider,
+            'model' => $config->model,
+            'scorer_prompt_version' => $config->scorerPromptVersion,
+            'generator_prompt_version' => $config->generatorPromptVersion,
+            'experiment_id' => $config->experimentId,
+            'memory_version' => $config->memoryVersion,
+        ];
+
+        if ($workflowRunId !== null) {
+            $options['workflow_run_id'] = $workflowRunId;
+        }
+
         $run = $this->agentRuns->createQueued(
             workspaceId: $workspaceId,
             slug: 'hook',
             input: [
                 'content_version_id' => $config->contentVersionId,
             ],
-            options: [
-                'max_variants' => $config->maxVariants,
-                'target_audience' => $config->targetAudience,
-                'content_pillar' => $config->contentPillar,
-                'provider' => $config->provider,
-                'model' => $config->model,
-                'scorer_prompt_version' => $config->scorerPromptVersion,
-                'generator_prompt_version' => $config->generatorPromptVersion,
-                'experiment_id' => $config->experimentId,
-                'memory_version' => $config->memoryVersion,
-            ],
+            options: $options,
             idempotencyKey: $idempotencyKey,
         );
 

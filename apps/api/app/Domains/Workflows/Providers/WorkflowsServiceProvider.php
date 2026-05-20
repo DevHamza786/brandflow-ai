@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace App\Domains\Workflows\Providers;
 
 use App\Domains\Shared\Providers\DomainServiceProvider;
+use App\Domains\Workflows\Contracts\WorkflowRepositoryContract;
+use App\Domains\Workflows\Contracts\WorkflowRunRepositoryContract;
+use App\Domains\Workflows\Repositories\WorkflowRepository;
+use App\Domains\Workflows\Repositories\WorkflowRunRepository;
 
 final class WorkflowsServiceProvider extends DomainServiceProvider
 {
@@ -13,8 +17,9 @@ final class WorkflowsServiceProvider extends DomainServiceProvider
         return 'Workflows';
     }
 
-    protected function registerServices(): void
+    protected function registerRepositories(): void
     {
-        // WorkflowExecutionTracker + WorkflowOrchestrator bound in QueueServiceProvider.
+        $this->app->bind(WorkflowRepositoryContract::class, WorkflowRepository::class);
+        $this->app->bind(WorkflowRunRepositoryContract::class, WorkflowRunRepository::class);
     }
 }

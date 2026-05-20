@@ -24,6 +24,7 @@ return [
     */
     'names' => [
         'critical',
+        'orchestration',
         'scheduling',
         'workflows',
         'ai',
@@ -39,6 +40,7 @@ return [
     */
     'timeouts' => [
         'critical' => 90,
+        'orchestration' => 120,
         'scheduling' => 90,
         'workflows' => 120,
         'ai' => 120,
@@ -56,6 +58,10 @@ return [
         'critical' => [
             'tries' => 5,
             'backoff' => [10, 30, 60, 120, 300],
+        ],
+        'orchestration' => [
+            'tries' => 3,
+            'backoff' => [10, 30, 120],
         ],
         'scheduling' => [
             'tries' => 5,
@@ -100,7 +106,7 @@ return [
     */
     'failed' => [
         'log_channel' => env('QUEUE_FAILED_LOG_CHANNEL', 'stack'),
-        'alert_on_queues' => ['critical', 'scheduling'],
+        'alert_on_queues' => ['critical', 'orchestration', 'scheduling'],
     ],
 
 ];

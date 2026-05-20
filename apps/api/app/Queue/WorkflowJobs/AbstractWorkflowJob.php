@@ -34,7 +34,7 @@ abstract class AbstractWorkflowJob extends AbstractQueueJob
     {
         return [
             ...parent::middleware(),
-            new TrackWorkflowExecution,
+            app(TrackWorkflowExecution::class),
         ];
     }
 

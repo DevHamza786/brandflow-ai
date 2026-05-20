@@ -23,4 +23,6 @@ interface HookScoreRepositoryContract extends WorkspaceScopedRepositoryContract
         ?string $traceId,
         array $metadata = [],
     ): HookScore;
+
+    public function findByAgentRun(string $workspaceId, string $agentRunId): ?HookScore;
 }

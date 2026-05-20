@@ -19,7 +19,7 @@ final class HookScoreDimensions extends DataTransferObject
     /**
      * @param  array<string, mixed>  $data
      */
-    public static function fromArray(array $data): self
+    public static function fromArray(array $data): static
     {
         return new self(
             curiosityGap: (float) ($data['curiosity_gap'] ?? $data['curiosityGap'] ?? 0),

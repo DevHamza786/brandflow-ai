@@ -11,9 +11,11 @@ use App\Domains\AI\Data\AiResponse;
 use App\Domains\AI\Data\EmbedRequest;
 use App\Domains\AI\Data\EmbedResponse;
 use App\Domains\AI\Data\LlmRequest;
+use App\Domains\AI\Data\TokenUsage;
 use App\Domains\AI\Enums\AiMessageRole;
 use App\Domains\AI\Enums\LlmProvider;
 use App\Domains\AI\Exceptions\ProviderNotConfiguredException;
+use App\Domains\AI\Support\GeminiSchemaSanitizer;
 use App\Domains\AI\Support\ProviderHttpClient;
 use App\Domains\AI\Support\StructuredOutputDecoder;
 use Generator;
@@ -29,6 +31,7 @@ final class GeminiAdapter implements LlmProviderAdapter
     public function __construct(
         private readonly ProviderHttpClient $http,
         private readonly StructuredOutputDecoder $structuredDecoder,
+        private readonly GeminiSchemaSanitizer $schemaSanitizer,
     ) {
     }
 
@@ -206,6 +209,12 @@ final class GeminiAdapter implements LlmProviderAdapter
 
         if ($request->structuredOutput !== null) {
             $config['responseMimeType'] = 'application/json';
+
+            if ($request->structuredOutput->schema !== null) {
+                $config['responseSchema'] = $this->schemaSanitizer->sanitize(
+                    $request->structuredOutput->schema
+                );
+            }
         }
 
         return $config;

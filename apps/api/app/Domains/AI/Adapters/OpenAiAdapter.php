@@ -10,6 +10,7 @@ use App\Domains\AI\Data\AiResponse;
 use App\Domains\AI\Data\EmbedRequest;
 use App\Domains\AI\Data\EmbedResponse;
 use App\Domains\AI\Data\LlmRequest;
+use App\Domains\AI\Data\TokenUsage;
 use App\Domains\AI\Enums\LlmProvider;
 use App\Domains\AI\Exceptions\ProviderNotConfiguredException;
 use App\Domains\AI\Support\ProviderHttpClient;

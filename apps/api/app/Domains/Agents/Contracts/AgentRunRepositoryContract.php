@@ -14,6 +14,8 @@ interface AgentRunRepositoryContract extends WorkspaceScopedRepositoryContract
 
     public function findOrFail(string $workspaceId, string $id): AgentRun;
 
+    public function findByIdempotencyKey(string $workspaceId, ?string $idempotencyKey): ?AgentRun;
+
     /**
      * @param  array<string, mixed>  $input
      * @param  array<string, mixed>  $options
@@ -31,4 +33,9 @@ interface AgentRunRepositoryContract extends WorkspaceScopedRepositoryContract
     public function markCompleted(AgentRun $run, AgentResult $result): void;
 
     public function markFailed(AgentRun $run, string $message, array $context = []): void;
+
+    /**
+     * @param  array<string, mixed>  $options
+     */
+    public function mergeOptions(AgentRun $run, array $options): AgentRun;
 }

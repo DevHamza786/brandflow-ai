@@ -37,4 +37,13 @@ final class HookScoreRepository implements HookScoreRepositoryContract
             'metadata' => $metadata,
         ]);
     }
+
+    public function findByAgentRun(string $workspaceId, string $agentRunId): ?HookScore
+    {
+        return HookScore::query()
+            ->where('workspace_id', $workspaceId)
+            ->where('agent_run_id', $agentRunId)
+            ->latest('created_at')
+            ->first();
+    }
 }

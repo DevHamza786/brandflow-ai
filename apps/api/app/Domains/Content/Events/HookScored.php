@@ -24,6 +24,7 @@ final class HookScored
         public readonly string $agentRunId,
         public readonly string $hookScoreId,
         public readonly array $payload,
+        public readonly ?string $generatedOutputId = null,
     ) {
     }
 }

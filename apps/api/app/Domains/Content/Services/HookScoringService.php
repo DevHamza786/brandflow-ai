@@ -4,17 +4,18 @@ declare(strict_types=1);
 
 namespace App\Domains\Content\Services;
 
-use App\Domains\Agents\Agents\HookAgent\Data\HookResult;
 use App\Domains\Agents\Agents\HookAgent\HookAgentConfig;
-use App\Domains\Agents\Agents\HookAgent\Support\HookPromptTemplate;
+use App\Domains\Agents\Agents\HookAgent\Support\HookPersonalizationLogger;
 use App\Domains\Agents\Agents\HookAgent\Support\HookResponseParser;
 use App\Domains\Agents\Agents\HookAgent\Support\HookResponseValidator;
+use App\Domains\Agents\Agents\HookAgent\Data\HookResult;
+use App\Domains\Agents\Agents\HookAgent\Support\HookPromptTemplate;
 use App\Domains\AI\Contracts\LlmGateway;
 use App\Domains\AI\Contracts\PromptTemplateRegistryContract;
 use App\Domains\AI\Data\AiMessage;
 use App\Domains\AI\Data\LlmRequest;
 use App\Domains\AI\Enums\AiMessageRole;
-use App\Domains\AI\Data\MemoryContext;
+use App\Domains\Brand\Data\BrandMemoryContext;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -28,6 +29,7 @@ final class HookScoringService
         private readonly PromptTemplateRegistryContract $prompts,
         private readonly HookResponseParser $parser,
         private readonly HookResponseValidator $validator,
+        private readonly HookPersonalizationLogger $personalizationLogger,
     ) {
     }
 
@@ -35,22 +37,34 @@ final class HookScoringService
         string $workspaceId,
         string $hookText,
         HookAgentConfig $config,
-        MemoryContext $memory,
+        BrandMemoryContext $brandMemory,
         ?string $traceId = null,
     ): HookResult {
         $this->validator->validateHookText($hookText);
 
         $traceId ??= (string) Str::uuid();
 
+        $promptVars = array_merge($brandMemory->promptVariables, [
+            'hook_text' => $hookText,
+            'target_audience' => $brandMemory->promptVariables['target_audience']
+                ?? $config->targetAudience
+                ?? 'LinkedIn professionals',
+            'content_pillar' => $config->contentPillar ?? '',
+            'compact_brand_memory' => $brandMemory->compactBrandSection,
+        ]);
+
         $prompt = $this->prompts->render(
             HookPromptTemplate::SCORER_SLUG,
-            [
-                'hook_text' => $hookText,
-                'target_audience' => $config->targetAudience ?? 'LinkedIn professionals',
-                'content_pillar' => $config->contentPillar ?? '',
-                'memory_chunks' => $memory->chunks,
-            ],
+            $promptVars,
             $config->scorerPromptVersion,
+        );
+
+        $this->personalizationLogger->logPromptEnrichment(
+            'score',
+            $workspaceId,
+            $traceId,
+            $brandMemory,
+            $prompt,
         );
 
         Log::info('hook.scoring.started', [
@@ -58,7 +72,11 @@ final class HookScoringService
             'trace_id' => $traceId,
             'prompt' => HookPromptTemplate::SCORER_SLUG,
             'experiment_id' => $config->experimentId,
+            'memory_version' => $brandMemory->memoryVersion,
+            'profile_id' => $brandMemory->profileId,
         ]);
+
+        $gatewayMemory = $brandMemory->memoryContextForGateway();
 
         $response = $this->gateway->complete(new LlmRequest(
             workspaceId: $workspaceId,
@@ -68,7 +86,7 @@ final class HookScoringService
                 new AiMessage(AiMessageRole::User, $prompt),
             ],
             structuredOutput: HookPromptTemplate::scorerStructuredOutput(),
-            memoryContext: $memory->isEmpty() ? null : $memory,
+            memoryContext: $gatewayMemory,
             traceId: $traceId,
             promptSlug: HookPromptTemplate::SCORER_SLUG,
             promptVersion: $config->scorerPromptVersion,
@@ -76,6 +94,7 @@ final class HookScoringService
                 'agent' => 'hook',
                 'operation' => 'score',
                 'experiment_id' => $config->experimentId,
+                'brand_memory' => $brandMemory->toAnalyticsPayload(),
             ],
         ));
 

@@ -21,7 +21,7 @@ final class RunHookAgentJob extends BaseQueueJob implements ShouldBeUnique
 
     public function __construct(
         string $workspaceId,
-        public readonly string $agentRunId,
+        public string $agentRunId,
     ) {
         parent::__construct($workspaceId);
 

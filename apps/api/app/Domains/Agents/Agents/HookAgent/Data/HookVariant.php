@@ -19,7 +19,7 @@ final class HookVariant extends DataTransferObject
     /**
      * @param  array<string, mixed>  $data
      */
-    public static function fromArray(array $data, ?string $experimentVariant = null): self
+    public static function fromArray(array $data, ?string $experimentVariant = null): static
     {
         return new self(
             text: (string) ($data['text'] ?? ''),

@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Domains\Agents\Models;
 
+use App\Domains\AI\Models\GeneratedOutput;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AgentRun extends Model
 {
@@ -36,5 +38,10 @@ class AgentRun extends Model
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
         ];
+    }
+
+    public function generatedOutputs(): HasMany
+    {
+        return $this->hasMany(GeneratedOutput::class);
     }
 }

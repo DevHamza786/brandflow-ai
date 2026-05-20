@@ -83,7 +83,7 @@ return [
         ],
         'supervisor-scheduling' => [
             'connection' => 'redis',
-            'queue' => ['scheduling'],
+            'queue' => ['orchestration', 'scheduling'],
             'balance' => 'simple',
             'maxProcesses' => (int) env('HORIZON_SCHEDULING_WORKERS', 2),
             'memory' => 128,

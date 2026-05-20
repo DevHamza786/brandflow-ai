@@ -8,6 +8,9 @@ use App\Domains\Agents\Contracts\AgentContract;
 use App\Domains\Agents\Contracts\AgentRunRepositoryContract;
 use App\Domains\Agents\Data\AgentContext;
 use App\Domains\Agents\Data\AgentResult;
+use App\Domains\Agents\Events\AgentRunCompleted;
+use App\Domains\Agents\Events\AgentRunFailed;
+use App\Domains\Agents\Events\AgentRunStarted;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -57,16 +60,25 @@ final class AgentRunner
         );
 
         $this->runs->markRunning($run);
+        $run = $run->fresh() ?? $run;
+
+        event(new AgentRunStarted($run));
 
         try {
             $result = $agent->run($context);
             $this->runs->markCompleted($run, $result);
+            $run = $run->fresh() ?? $run;
+
+            event(new AgentRunCompleted($run));
 
             return $result;
         } catch (Throwable $e) {
             $this->runs->markFailed($run, $e->getMessage(), [
                 'exception' => $e::class,
             ]);
+            $run = $run->fresh() ?? $run;
+
+            event(new AgentRunFailed($run, $e->getMessage()));
 
             throw $e;
         }

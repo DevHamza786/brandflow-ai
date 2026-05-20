@@ -4,13 +4,23 @@ declare(strict_types=1);
 
 namespace App\Domains\AI\Providers;
 
+use App\Domains\AI\Actions\FinalizeGeneratedOutputAction;
+use App\Domains\AI\Actions\PersistGeneratedOutputAction;
 use App\Domains\AI\Adapters\GeminiAdapter;
 use App\Domains\AI\Adapters\NullLlmGateway;
 use App\Domains\AI\Adapters\OpenAiAdapter;
+use App\Domains\AI\Contracts\GeneratedOutputPersistenceContract;
+use App\Domains\AI\Contracts\GeneratedOutputRepositoryContract;
+use App\Domains\AI\Contracts\GeneratedOutputSerializerContract;
 use App\Domains\AI\Contracts\LlmGateway;
 use App\Domains\AI\Contracts\LlmProviderFactoryContract;
 use App\Domains\AI\Contracts\PromptRendererContract;
 use App\Domains\AI\Contracts\PromptTemplateRegistryContract;
+use App\Domains\AI\Contracts\WorkflowGeneratedOutputContract;
+use App\Domains\AI\Repositories\GeneratedOutputRepository;
+use App\Domains\AI\Services\GeneratedOutputSerializer;
+use App\Domains\AI\Services\GeneratedOutputService;
+use App\Domains\AI\Services\WorkflowGeneratedOutputBridge;
 use App\Domains\AI\Factories\LlmProviderFactory;
 use App\Domains\AI\Services\LlmGatewayService;
 use App\Domains\AI\Services\PromptRenderer;
@@ -37,6 +47,11 @@ final class AIServiceProvider extends DomainServiceProvider
         View::addNamespace($namespace, $basePath);
     }
 
+    protected function registerRepositories(): void
+    {
+        $this->app->bind(GeneratedOutputRepositoryContract::class, GeneratedOutputRepository::class);
+    }
+
     protected function registerServices(): void
     {
         $this->app->singleton(ProviderHttpClient::class);
@@ -53,6 +68,13 @@ final class AIServiceProvider extends DomainServiceProvider
         $this->app->singleton(PromptTemplateRegistryContract::class, PromptTemplateRegistry::class);
 
         $this->registerGateway();
+
+        $this->app->singleton(GeneratedOutputSerializerContract::class, GeneratedOutputSerializer::class);
+        $this->app->singleton(GeneratedOutputPersistenceContract::class, GeneratedOutputService::class);
+        $this->app->singleton(GeneratedOutputService::class);
+        $this->app->singleton(WorkflowGeneratedOutputContract::class, WorkflowGeneratedOutputBridge::class);
+        $this->app->singleton(PersistGeneratedOutputAction::class);
+        $this->app->singleton(FinalizeGeneratedOutputAction::class);
     }
 
     private function registerGateway(): void

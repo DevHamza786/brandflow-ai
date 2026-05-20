@@ -39,6 +39,12 @@ if [[ -f artisan ]]; then
     echo "[entrypoint] Running pgvector migrations..."
     php artisan migrate --force --no-interaction --path=database/migrations/pgvector
   fi
+
+  # Matches VITE_DEFAULT_WORKSPACE_ID so LinkedIn OAuth FK (workspaces) succeeds in local dev.
+  if [[ "${APP_ENV:-local}" == "local" ]] && [[ "${SEED_DEV_DEFAULT_WORKSPACE:-true}" == "true" ]]; then
+    echo "[entrypoint] Ensuring default dev workspace row..."
+    php artisan db:seed --class=DevDefaultWorkspaceSeeder --force --no-interaction || true
+  fi
 fi
 
 # Fix permissions for storage (dev bind mounts)
